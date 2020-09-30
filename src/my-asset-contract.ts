@@ -5,7 +5,7 @@
 import { Context, Contract, Info, Returns, Transaction } from 'fabric-contract-api';
 import { MyAsset } from './my-asset';
 
-@Info({title: 'MyAssetContract', description: 'My Smart Contract' })
+@Info({ title: 'MyAssetContract', description: 'My Smart Contract' })
 export class MyAssetContract extends Contract {
 
     @Transaction(false)
@@ -58,6 +58,36 @@ export class MyAssetContract extends Contract {
             throw new Error(`The my asset ${myAssetId} does not exist`);
         }
         await ctx.stub.deleteState(myAssetId);
+    }
+
+    @Transaction(false)
+    public async queryAllAssets(ctx: Context): Promise<string> {
+        const startKey = '000';
+        const endKey = '999';
+        const iterator = await ctx.stub.getStateByRange(startKey, endKey);
+        const allResults = [];
+        while (true) {
+            const res = await iterator.next();
+            if (res.value && res.value.value.toString()) {
+                console.log(res.value.value.toString('utf8'));
+
+                const Key = res.value.key;
+                let Record;
+                try {
+                    Record = JSON.parse(res.value.value.toString('utf8'));
+                } catch (err) {
+                    console.log(err);
+                    Record = res.value.value.toString('utf8');
+                }
+                allResults.push({ Key, Record });
+            }
+            if (res.done) {
+                console.log('end of data');
+                await iterator.close();
+                console.info(allResults);
+                return JSON.stringify(allResults);
+            }
+        }
     }
 
 }
